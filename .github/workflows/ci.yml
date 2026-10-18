@@ -1,0 +1,66 @@
+name: "Internal Tooling Suite — CI & PR Gate"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test-and-validate:
+    name: "Run Unit & Snapshot Tests (`pytest`)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Package & Dev Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Validate Repository `.doc-sync.yml`
+        run: |
+          tools doc-sync validate-config --config .doc-sync.yml
+
+      - name: Run Dry-Run Sync Smoke Test
+        run: |
+          tools doc-sync dry-run --config .doc-sync.yml --output-dir ./dist/xhtml
+
+      - name: Run Test Suite
+        run: |
+          pytest
+
+  pr-doc-completeness-gate:
+    name: "Copilot/Codex PR Documentation Completeness Gate (Advisory)"
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Package
+        run: |
+          python -m pip install -e .
+
+      - name: Run PR Completeness Gate & Draft CHANGELOG Entry
+        run: |
+          tools doc-sync pr-check --base-ref "origin/${{ github.base_ref }}"

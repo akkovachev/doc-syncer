@@ -1,0 +1,30 @@
+# .doc-sync.yml — lives at the root of each onboarded repository
+version: 1
+
+confluence:
+  space_key: ENG                      # Confluence space key
+  base_url_secret: CONFLUENCE_BASE_URL # name of the org secret (not the value)
+  auth_secret: CONFLUENCE_PAT          # name of the org secret holding the PAT/token
+
+defaults:
+  force_overwrite: false              # safe default; conflicts block the sync
+  add_source_banner: true             # inject "auto-generated from <repo>" panel
+  on_missing_file: warn               # warn | fail
+  agent_review: true                  # advisory Copilot/Codex pre-sync diff summary
+
+mappings:
+  - source: README.md
+    confluence_page_id: "123456789"
+    title: "Internal Tooling Suite — Overview"
+    labels: [engineering, internal-tools, doc-sync]
+
+  - source: CHANGELOG.md
+    confluence_page_id: "123456790"
+    force_overwrite: true                      # per-mapping override of the safe default
+
+  - source: "docs/**/*.md"                     # glob: many files -> many pages
+    confluence_parent_page_id: "123400000"     # new child pages created here if no explicit id
+    title_from: h1                              # derive page title from the file's first H1
+
+notifications:
+  slack_webhook_secret: DOC_SYNC_SLACK_WEBHOOK  # optional: post summary on conflict/failure

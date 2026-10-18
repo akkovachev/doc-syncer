@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Tooling Suite — Doc-Sync Engine Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'JetBrains Mono', monospace; background:#020617; min-height:100vh; padding:2rem; color:white; }
+  .container { max-width:1400px; margin:0 auto; }
+  .header { margin-bottom:2rem; }
+  .header-row { display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem; }
+  .pulse-dot { width:12px; height:12px; background:#22d3ee; border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+  h1 { font-size:1.5rem; font-weight:700; letter-spacing:-0.025em; }
+  .subtitle { color:#94a3b8; font-size:0.875rem; margin-left:1.75rem; }
+  .diagram-container { background:rgba(15,23,42,0.5); border-radius:1rem; border:1px solid #1e293b; padding:1.5rem; overflow-x:auto; }
+  svg { width:100%; min-width:1100px; display:block; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:1rem; margin-top:2rem; }
+  .card { background:rgba(15,23,42,0.5); border-radius:0.75rem; border:1px solid #1e293b; padding:1.25rem; }
+  .card-header { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; }
+  .card-dot { width:8px; height:8px; border-radius:50%; }
+  .card-dot.cyan{background:#22d3ee;} .card-dot.emerald{background:#34d399;} .card-dot.violet{background:#a78bfa;}
+  .card-dot.amber{background:#fbbf24;} .card-dot.rose{background:#fb7185;} .card-dot.orange{background:#fb923c;}
+  .card h3 { font-size:0.875rem; font-weight:600; }
+  .card ul { list-style:none; color:#94a3b8; font-size:0.75rem; }
+  .card li { margin-bottom:0.375rem; }
+  .footer { text-align:center; margin-top:1.5rem; color:#475569; font-size:0.75rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-row">
+      <div class="pulse-dot"></div>
+      <h1>Internal Tooling Suite — Module 01: Doc-Sync Engine</h1>
+    </div>
+    <p class="subtitle">Markdown (repos) → GitHub Actions → Centralized Tooling Suite → Confluence REST API</p>
+  </div>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 1400 1150">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+        </marker>
+        <marker id="arrowhead-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+        </marker>
+        <marker id="arrowhead-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#22d3ee" />
+        </marker>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+        </pattern>
+      </defs>
+
+      <rect width="100%" height="100%" fill="url(#grid)" />
+
+      <!-- ===================== ARROWS (drawn early, behind boxes) ===================== -->
+      <!-- Repos -> GitHub Actions / Security -->
+      <line x1="170" y1="150" x2="170" y2="190" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="460" y1="150" x2="460" y2="190" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="750" y1="150" x2="750" y2="190" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="1040" y1="150" x2="1040" y2="190" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <text x="460" y="175" fill="#94a3b8" font-size="8" text-anchor="middle">push: **/*.md</text>
+
+      <!-- GH Actions -> Discovery Engine -->
+      <path d="M 300 280 L 300 320 Q 300 335 270 335 L 200 335 Q 185 335 185 350 L 185 368" fill="none" stroke="#fb923c" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <text x="300" y="315" fill="#94a3b8" font-size="8">checkout tools repo · run `doc-sync sync`</text>
+
+      <!-- Security secrets -> API Client -->
+      <path d="M 1050 280 L 1050 320 Q 1050 340 1000 340 L 820 340 Q 785 340 785 355 L 785 368" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrowhead-rose)"/>
+      <text x="1000" y="332" fill="#fb7185" font-size="8" text-anchor="middle">inject secrets as env vars</text>
+
+      <!-- Component chain -->
+      <line x1="320" y1="430" x2="348" y2="430" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <text x="334" y="420" fill="#94a3b8" font-size="7" text-anchor="middle">files +</text>
+      <text x="334" y="450" fill="#94a3b8" font-size="7" text-anchor="middle">pageIds</text>
+
+      <line x1="620" y1="430" x2="648" y2="430" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <text x="634" y="420" fill="#94a3b8" font-size="7" text-anchor="middle">changed-only</text>
+      <text x="634" y="450" fill="#94a3b8" font-size="7" text-anchor="middle">(hash diff)</text>
+
+      <line x1="920" y1="430" x2="948" y2="430" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <text x="934" y="420" fill="#94a3b8" font-size="7" text-anchor="middle">XHTML</text>
+      <text x="934" y="450" fill="#94a3b8" font-size="7" text-anchor="middle">payload</text>
+
+      <!-- API Client -> Confluence REST API -->
+      <line x1="1085" y1="490" x2="1085" y2="560" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <path d="M 1085 560 L 1085 650 Q 1085 665 1070 665 L 870 665 Q 850 665 850 680 L 850 698" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <text x="960" y="658" fill="#94a3b8" font-size="8" text-anchor="middle">PUT /rest/api/content/{id} (versioned)</text>
+
+      <!-- REST API -> Confluence Cloud -->
+      <line x1="720" y1="780" x2="720" y2="818" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+      <!-- Agent dashed integrations -->
+      <path d="M 1200 160 L 1160 160 Q 1140 160 1140 180 L 1140 190" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead-cyan)"/>
+      <text x="1250" y="150" fill="#22d3ee" font-size="7" text-anchor="middle">PR-time checks</text>
+      <path d="M 1215 300 Q 1230 340 1150 380 Q 700 440 520 405 L 490 395" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="4,4" marker-end="url(#arrowhead-cyan)"/>
+      <text x="900" y="400" fill="#22d3ee" font-size="7" text-anchor="middle">pre-sync diff review / suggestions</text>
+
+      <!-- ===================== REGION BOUNDARY ===================== -->
+      <rect x="20" y="320" width="1360" height="340" rx="12" fill="rgba(251,191,36,0.05)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+      <text x="36" y="340" fill="#fbbf24" font-size="10" font-weight="600">Centralized Repo: github.com/org/internal-tools — Module: /tools/doc-sync</text>
+
+      <!-- ===================== ROW A: SOURCE REPOS ===================== -->
+      <rect x="40" y="50" width="260" height="100" rx="8" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="170" y="78" fill="white" font-size="12" font-weight="600" text-anchor="middle">repo: web-portal</text>
+      <text x="170" y="96" fill="#94a3b8" font-size="9" text-anchor="middle">README.md · CHANGELOG.md</text>
+      <text x="170" y="110" fill="#94a3b8" font-size="9" text-anchor="middle">.doc-sync.yml config</text>
+      <text x="170" y="128" fill="#22d3ee" font-size="8" text-anchor="middle">on: push → main</text>
+
+      <rect x="330" y="50" width="260" height="100" rx="8" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="460" y="78" fill="white" font-size="12" font-weight="600" text-anchor="middle">repo: payments-service</text>
+      <text x="460" y="96" fill="#94a3b8" font-size="9" text-anchor="middle">README.md · CHANGELOG.md</text>
+      <text x="460" y="110" fill="#94a3b8" font-size="9" text-anchor="middle">.doc-sync.yml config</text>
+      <text x="460" y="128" fill="#22d3ee" font-size="8" text-anchor="middle">on: push → main</text>
+
+      <rect x="620" y="50" width="260" height="100" rx="8" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="750" y="78" fill="white" font-size="12" font-weight="600" text-anchor="middle">repo: infra-platform</text>
+      <text x="750" y="96" fill="#94a3b8" font-size="9" text-anchor="middle">README.md · CHANGELOG.md</text>
+      <text x="750" y="110" fill="#94a3b8" font-size="9" text-anchor="middle">.doc-sync.yml config</text>
+      <text x="750" y="128" fill="#22d3ee" font-size="8" text-anchor="middle">on: push → main</text>
+
+      <rect x="910" y="50" width="260" height="100" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+      <text x="1040" y="78" fill="white" font-size="12" font-weight="600" text-anchor="middle">+ N more repositories</text>
+      <text x="1040" y="96" fill="#94a3b8" font-size="9" text-anchor="middle">org-wide adoption via</text>
+      <text x="1040" y="110" fill="#94a3b8" font-size="9" text-anchor="middle">reusable workflow template</text>
+      <text x="1040" y="128" fill="#94a3b8" font-size="8" text-anchor="middle">opt-in, zero core refactor</text>
+
+      <!-- ===================== ROW B: GITHUB ACTIONS + SECURITY ===================== -->
+      <rect x="40" y="190" width="820" height="90" rx="8" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+      <text x="450" y="218" fill="white" font-size="12" font-weight="600" text-anchor="middle">GitHub Actions — Reusable Workflow `doc-sync.yml`</text>
+      <text x="450" y="238" fill="#94a3b8" font-size="9" text-anchor="middle">triggers: push (paths: **/*.md), workflow_dispatch, nightly cron (drift check)</text>
+      <text x="450" y="254" fill="#94a3b8" font-size="9" text-anchor="middle">calls: org/internal-tools/.github/workflows/doc-sync.yml@v1</text>
+      <text x="450" y="270" fill="#fb923c" font-size="8" text-anchor="middle">uses: internal-tools CLI (pinned release tag)</text>
+
+      <rect x="900" y="190" width="300" height="90" rx="8" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+      <text x="1050" y="218" fill="white" font-size="12" font-weight="600" text-anchor="middle">GitHub OIDC + Secrets</text>
+      <text x="1050" y="238" fill="#94a3b8" font-size="9" text-anchor="middle">CONFLUENCE_BASE_URL</text>
+      <text x="1050" y="252" fill="#94a3b8" font-size="9" text-anchor="middle">CONFLUENCE_PAT (org secret, scoped)</text>
+      <text x="1050" y="266" fill="#fb7185" font-size="8" text-anchor="middle">rotated quarterly · least-privilege bot account</text>
+
+      <!-- ===================== ROW C: CORE ENGINE COMPONENTS ===================== -->
+      <rect x="50" y="370" width="270" height="120" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="185" y="398" fill="white" font-size="12" font-weight="600" text-anchor="middle">Discovery Engine</text>
+      <text x="185" y="418" fill="#94a3b8" font-size="9" text-anchor="middle">walks repo tree, reads</text>
+      <text x="185" y="432" fill="#94a3b8" font-size="9" text-anchor="middle">.doc-sync.yml</text>
+      <text x="185" y="448" fill="#94a3b8" font-size="9" text-anchor="middle">builds md-file → pageId map</text>
+      <text x="185" y="466" fill="#34d399" font-size="8" text-anchor="middle">tools/doc-sync/discovery.py</text>
+
+      <rect x="350" y="370" width="270" height="120" rx="8" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="485" y="398" fill="white" font-size="12" font-weight="600" text-anchor="middle">Conflict Resolver / State Cache</text>
+      <text x="485" y="418" fill="#94a3b8" font-size="9" text-anchor="middle">content-hash + Confluence</text>
+      <text x="485" y="432" fill="#94a3b8" font-size="9" text-anchor="middle">page `version` compare</text>
+      <text x="485" y="448" fill="#94a3b8" font-size="9" text-anchor="middle">dry-run diff, skip unchanged</text>
+      <text x="485" y="466" fill="#a78bfa" font-size="8" text-anchor="middle">state: artifact-cached JSON</text>
+
+      <rect x="650" y="370" width="270" height="120" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="785" y="398" fill="white" font-size="12" font-weight="600" text-anchor="middle">Markdown → XHTML Converter</text>
+      <text x="785" y="418" fill="#94a3b8" font-size="9" text-anchor="middle">markdown-it + custom renderer</text>
+      <text x="785" y="432" fill="#94a3b8" font-size="9" text-anchor="middle">→ Confluence Storage Format</text>
+      <text x="785" y="448" fill="#94a3b8" font-size="9" text-anchor="middle">macros: code, TOC, info panel</text>
+      <text x="785" y="466" fill="#34d399" font-size="8" text-anchor="middle">tools/doc-sync/converter.py</text>
+
+      <rect x="950" y="370" width="270" height="120" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="1085" y="398" fill="white" font-size="12" font-weight="600" text-anchor="middle">Confluence API Client</text>
+      <text x="1085" y="418" fill="#94a3b8" font-size="9" text-anchor="middle">auth (PAT / OAuth2 3LO)</text>
+      <text x="1085" y="432" fill="#94a3b8" font-size="9" text-anchor="middle">GET version → PUT update</text>
+      <text x="1085" y="448" fill="#94a3b8" font-size="9" text-anchor="middle">retry + exponential backoff</text>
+      <text x="1085" y="466" fill="#34d399" font-size="8" text-anchor="middle">tools/doc-sync/confluence_client.py</text>
+
+      <!-- ===================== AGENT BOX ===================== -->
+      <rect x="1210" y="60" width="180" height="250" rx="8" fill="rgba(30,41,59,0.5)" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="2,0"/>
+      <text x="1300" y="86" fill="white" font-size="11" font-weight="600" text-anchor="middle">Copilot / Codex</text>
+      <text x="1300" y="100" fill="white" font-size="11" font-weight="600" text-anchor="middle">Agent</text>
+      <text x="1300" y="130" fill="#94a3b8" font-size="8" text-anchor="middle">• PR-time doc-completeness</text>
+      <text x="1300" y="144" fill="#94a3b8" font-size="8" text-anchor="middle">  gate (Actions job)</text>
+      <text x="1300" y="166" fill="#94a3b8" font-size="8" text-anchor="middle">• Drafts CHANGELOG.md</text>
+      <text x="1300" y="180" fill="#94a3b8" font-size="8" text-anchor="middle">  entries from commits</text>
+      <text x="1300" y="202" fill="#94a3b8" font-size="8" text-anchor="middle">• Reviews rendered XHTML</text>
+      <text x="1300" y="216" fill="#94a3b8" font-size="8" text-anchor="middle">  diff before sync</text>
+      <text x="1300" y="238" fill="#94a3b8" font-size="8" text-anchor="middle">• Suggests .doc-sync.yml</text>
+      <text x="1300" y="252" fill="#94a3b8" font-size="8" text-anchor="middle">  config for new repos</text>
+      <text x="1300" y="280" fill="#22d3ee" font-size="7" text-anchor="middle">GitHub Copilot Agent / Codex CLI</text>
+
+      <!-- ===================== EXTERNAL: CONFLUENCE REST API ===================== -->
+      <rect x="690" y="700" width="320" height="80" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+      <text x="850" y="728" fill="white" font-size="12" font-weight="600" text-anchor="middle">Confluence REST API</text>
+      <text x="850" y="746" fill="#94a3b8" font-size="9" text-anchor="middle">/wiki/rest/api/content/{id}</text>
+      <text x="850" y="762" fill="#94a3b8" font-size="9" text-anchor="middle">Cloud or Data Center (on-prem)</text>
+
+      <!-- ===================== CONFLUENCE DESTINATION ===================== -->
+      <rect x="520" y="818" width="400" height="110" rx="8" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="720" y="848" fill="white" font-size="12" font-weight="600" text-anchor="middle">Confluence Cloud / Data Center</text>
+      <text x="720" y="868" fill="#94a3b8" font-size="9" text-anchor="middle">Space: ENG — Page Tree</text>
+      <text x="720" y="884" fill="#94a3b8" font-size="9" text-anchor="middle">synced pages + full version history</text>
+      <text x="720" y="900" fill="#94a3b8" font-size="9" text-anchor="middle">single source of truth for stakeholders</text>
+      <text x="720" y="916" fill="#a78bfa" font-size="8" text-anchor="middle">rollback via native Confluence page history</text>
+
+      <!-- ===================== LEGEND ===================== -->
+      <text x="40" y="975" fill="white" font-size="10" font-weight="600">Legend</text>
+      <rect x="40" y="988" width="16" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+      <text x="62" y="996" fill="#94a3b8" font-size="8">Source Repo</text>
+      <rect x="180" y="988" width="16" height="10" rx="2" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1"/>
+      <text x="202" y="996" fill="#94a3b8" font-size="8">CI / Orchestration</text>
+      <rect x="350" y="988" width="16" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+      <text x="372" y="996" fill="#94a3b8" font-size="8">Engine Component</text>
+      <rect x="520" y="988" width="16" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+      <text x="542" y="996" fill="#94a3b8" font-size="8">State / Destination</text>
+      <rect x="700" y="988" width="16" height="10" rx="2" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1"/>
+      <text x="722" y="996" fill="#94a3b8" font-size="8">Security / Secrets</text>
+      <rect x="860" y="988" width="16" height="10" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+      <text x="882" y="996" fill="#94a3b8" font-size="8">External System</text>
+      <line x1="1010" y1="993" x2="1026" y2="993" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="1032" y="996" fill="#94a3b8" font-size="8">Agentic Flow</text>
+    </svg>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><div class="card-dot cyan"></div><h3>Module 01: Doc-Sync Engine</h3></div>
+      <ul>
+        <li>• Discovers Markdown via per-repo .doc-sync.yml</li>
+        <li>• Converts to Confluence Storage Format (XHTML)</li>
+        <li>• Hash + version-aware conflict detection</li>
+        <li>• Idempotent, dry-run capable, safe retries</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot rose"></div><h3>Security &amp; Auth</h3></div>
+      <ul>
+        <li>• GitHub Actions OIDC + encrypted org secrets</li>
+        <li>• Least-privilege Confluence bot account (PAT/OAuth2)</li>
+        <li>• No secrets ever committed to caller repos</li>
+        <li>• Quarterly credential rotation</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot amber"></div><h3>Roadmap — Future Modules</h3></div>
+      <ul>
+        <li>• /tools/xray-scan — JFrog CLI + Xray security scans</li>
+        <li>• /tools/gh-actions-wrappers — reusable composite actions</li>
+        <li>• Shared /tools/common lib (auth, logging, config loader)</li>
+        <li>• Single CLI entrypoint: `tools &lt;subcommand&gt;`</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="footer">Internal Tooling Suite · Module 01 — Doc-Sync Engine · Principal Architecture Proposal</p>
+</div>
+</body>
+</html>

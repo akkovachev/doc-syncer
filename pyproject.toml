@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "internal-tools"
+version = "1.0.0"
+description = "Centralized Internal Tooling Suite — Module 01: Doc-Sync Engine (Markdown to Confluence)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [
+    { name = "Platform Engineering" }
+]
+dependencies = [
+    "PyYAML>=6.0",
+    "requests>=2.31.0",
+    "jsonschema>=4.20.0",
+    "markdown-it-py>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+]
+
+[project.scripts]
+tools = "tools.common.plugin:main"
+doc-sync = "tools.common.plugin:doc_sync_Entrypoint"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tools*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.yml", "*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tools/doc-sync/tests"]
+pythonpath = ["."]
+addopts = "-v --import-mode=importlib"
