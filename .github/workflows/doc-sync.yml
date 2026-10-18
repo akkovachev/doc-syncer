@@ -117,6 +117,9 @@ jobs:
           EXTRA_FLAGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             EXTRA_FLAGS="$EXTRA_FLAGS --dry-run"
+          elif [ -z "$CONFLUENCE_PAT" ] || [ -z "$CONFLUENCE_BASE_URL" ]; then
+            echo "::warning::Confluence secrets are not configured - forcing --dry-run"
+            EXTRA_FLAGS="$EXTRA_FLAGS --dry-run"
           fi
           if [ "${{ inputs.drift_check }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             EXTRA_FLAGS="$EXTRA_FLAGS --drift-check"
